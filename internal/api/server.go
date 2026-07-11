@@ -69,7 +69,18 @@ func (s *Server) registerRoutes() {
 		{
 			clients := v1.Group("/clients")
 			{
-				clients.GET("/self", s.clientHandler.GetSelfClientInfoHandler)
+				clients.GET("/self", AuthorizationMiddleware(), s.clientHandler.GetSelfClientInfoHandler)
+			}
+		}
+	}
+
+	webhook := s.engine.Group("/webhook")
+	{
+		v1 := webhook.Group("/v1")
+		{
+			clients := v1.Group("/clients")
+			{
+				clients.POST("/balance", AuthorizationMiddleware(), s.clientHandler.ChargeBalanceWebhook)
 			}
 		}
 	}

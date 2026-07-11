@@ -5,7 +5,7 @@ endif
 
 SQLC_CONFIG_PATH=./db/postgres/sqlc.yml
 POSTGRES_MIGRATION_DIR=./db/postgres/migrations
-DATABASE_URL=postgres://$(POSTGRES_USERNAME):$(POSTGRES_PASSWORD)@$(POSTGRES_HOST):$(POSTGRES_PORT)/$(POSTGRES_DATABASE_NAME)?sslmode=disable
+POSTGRES_URL=postgres://$(POSTGRES_USERNAME):$(POSTGRES_PASSWORD)@$(POSTGRES_HOST):$(POSTGRES_PORT)/$(POSTGRES_DATABASE_NAME)?sslmode=disable
 
 run-core:
 	@echo "Running core application ..."
@@ -25,4 +25,4 @@ migrate-create:
 
 migrate-deploy:
 	@echo "Deploying database migrations ..."
-	@migrate -path $(MIGRATION_DIR) -database $(DATABASE_URL) up
+	@migrate -path $(POSTGRES_MIGRATION_DIR) -database $(POSTGRES_URL) up

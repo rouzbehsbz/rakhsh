@@ -1,0 +1,14 @@
+### Health Check
+GET http://localhost:3000/ping
+
+### Get Self Client Info
+GET http://localhost:3000/api/v1/clients/self
+Authorization: JustId 1
+
+### Charge Client Balance Webhook
+POST http://localhost:3000/webhook/v1/clients/balance
+Authorization: JustId 1
+
+{
+    "amount": 12
+}

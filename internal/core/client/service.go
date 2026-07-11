@@ -22,7 +22,7 @@ func (c *ClientService) GetClientInfo(ctx context.Context, id int32) (GetClientI
 	client, err := c.repository.FindClientById(ctx, id)
 	if err != nil {
 		if errors.Is(err, common.ErrNotFound) {
-			return GetClientInfoOutput{}, common.NotFoundError("Client does not exists")
+			return GetClientInfoOutput{}, common.NotFoundError("client does not exists")
 		}
 
 		return GetClientInfoOutput{}, common.InternalError("")
@@ -38,7 +38,7 @@ func (c *ClientService) ChargeBalance(ctx context.Context, id int32, amount deci
 	_, err := c.repository.FindClientById(ctx, id)
 	if err != nil {
 		if errors.Is(err, common.ErrNotFound) {
-			return common.NotFoundError("Client does not exists")
+			return common.NotFoundError("client does not exists")
 		}
 
 		return common.InternalError("")

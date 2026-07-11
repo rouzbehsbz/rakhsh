@@ -7,6 +7,7 @@ import (
 
 var (
 	ErrForbidden        = errors.New("Forbidden")
+	ErrUnauthorized     = errors.New("Unauthorized")
 	ErrNotFound         = errors.New("Resource not found")
 	ErrInternalDatabase = errors.New("Internal database error")
 	ErrInternal         = errors.New("Oops ! something went wrong")
@@ -50,6 +51,17 @@ func ForbiddenError(message string) *AppError {
 
 	return &AppError{
 		StatusCode: http.StatusMethodNotAllowed,
+		Message:    message,
+	}
+}
+
+func UnauthorizedError(message string) *AppError {
+	if message == "" {
+		message = ErrUnauthorized.Error()
+	}
+
+	return &AppError{
+		StatusCode: http.StatusUnauthorized,
 		Message:    message,
 	}
 }

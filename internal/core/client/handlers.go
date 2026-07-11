@@ -27,6 +27,7 @@ func (ch *ClientHandler) GetSelfClientInfoHandler(c *gin.Context) {
 
 	output, err := ch.service.GetClientInfo(ctx, clientId)
 	if err != nil {
+		apiUtils.SendError(c, err)
 		return
 	}
 
@@ -35,6 +36,7 @@ func (ch *ClientHandler) GetSelfClientInfoHandler(c *gin.Context) {
 
 func (ch *ClientHandler) ChargeBalanceWebhook(c *gin.Context) {
 	ctx := c.Request.Context()
+
 	clientId, err := apiUtils.GetClientId(c)
 	if err != nil {
 		return
@@ -43,13 +45,15 @@ func (ch *ClientHandler) ChargeBalanceWebhook(c *gin.Context) {
 	var req ChargeBalanceWebhookRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
+		apiUtils.SendError(c, err)
 		return
 	}
 
 	err = ch.service.ChargeBalance(ctx, clientId, req.Amount)
 	if err != nil {
+		apiUtils.SendError(c, err)
 		return
 	}
 
-	apiUtils.SendSuccessJson(c, "Account has been charged successfully.", nil)
+	apiUtils.SendSuccessJson(c, "account has been charged successfully.", nil)
 }
