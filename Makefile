@@ -21,7 +21,7 @@ migrate-create:
 		echo "'name' argument is required"; \
 		exit 1; \
 	fi
-	@migrate create -ext sql -dir $(MIGRATION_DIR) $(name)
+	@migrate create -ext sql -dir $(POSTGRES_MIGRATION_DIR) $(name)
 
 migrate-deploy:
 	@echo "Deploying database migrations ..."
