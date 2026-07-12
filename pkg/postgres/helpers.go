@@ -1,11 +1,30 @@
 package postgres
 
 import (
+	"context"
 	"fmt"
+	postgresDb "rakhsh/db/postgres/gen"
+	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/shopspring/decimal"
 )
+
+func GetTx(ctx context.Context) (pgx.Tx, bool) {
+	tx, ok := ctx.Value(txKey{}).(pgx.Tx)
+	return tx, ok
+}
+
+func ExtractTxQuery(q *postgresDb.Queries, ctx context.Context) *postgresDb.Queries {
+	tx, ok := GetTx(ctx)
+	if ok {
+		txQ := q.WithTx(tx)
+		return txQ
+	}
+
+	return q
+}
 
 func MapPgNumericToDecimal(pgNumeric pgtype.Numeric) (decimal.Decimal, error) {
 	if !pgNumeric.Valid {
@@ -34,4 +53,30 @@ func MapDecimalToPgNumeric(decimal decimal.Decimal) (pgtype.Numeric, error) {
 	}
 
 	return pgNumeric, nil
+}
+
+func TimeToPgTimestampz(t time.Time) pgtype.Timestamptz {
+	if t.IsZero() {
+		return pgtype.Timestamptz{
+			Time:  t,
+			Valid: false,
+		}
+	}
+	return pgtype.Timestamptz{
+		Time:  t,
+		Valid: true,
+	}
+}
+
+func IntToPgInt2(n int16, isZeroValid bool) pgtype.Int2 {
+	if n == 0 {
+		return pgtype.Int2{
+			Int16: n,
+			Valid: isZeroValid,
+		}
+	}
+	return pgtype.Int2{
+		Int16: n,
+		Valid: true,
+	}
 }

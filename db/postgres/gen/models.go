@@ -13,3 +13,15 @@ type Client struct {
 	Name    string
 	Balance pgtype.Numeric
 }
+
+type Message struct {
+	Uid       int64
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+	ClientID  int32
+	Status    int16
+	Reason    pgtype.Int2
+	IsExpress bool
+	Recipient string
+	Text      string
+}

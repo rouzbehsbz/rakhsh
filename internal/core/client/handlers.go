@@ -43,7 +43,6 @@ func (ch *ClientHandler) ChargeBalanceWebhook(c *gin.Context) {
 	}
 
 	var req ChargeBalanceWebhookRequest
-
 	if err := c.ShouldBindJSON(&req); err != nil {
 		apiUtils.SendError(c, err)
 		return

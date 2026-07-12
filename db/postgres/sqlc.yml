@@ -4,9 +4,11 @@ sql:
   - engine: "postgresql"
     queries:
       - "./queries/clients.sql"
+      - "./queries/messages.sql"
 
     schema:
       - "./schemas/clients.sql"
+      - "./schemas/messages.sql"
 
     gen:
       go:

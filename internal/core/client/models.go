@@ -14,6 +14,14 @@ type Client struct {
 	Balance decimal.Decimal
 }
 
+func (c *Client) IsBalanceEnough(amount decimal.Decimal) bool {
+	if amount.LessThanOrEqual(c.Balance) {
+		return true
+	}
+
+	return false
+}
+
 func MapPgClientToClient(pgClient *postgresDb.Client) (Client, error) {
 	if pgClient == nil {
 		return Client{}, fmt.Errorf("value is nil")

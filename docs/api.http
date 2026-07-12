@@ -5,6 +5,16 @@ GET http://localhost:3000/ping
 GET http://localhost:3000/api/v1/clients/self
 Authorization: JustId 1
 
+### Post new message
+POST http://localhost:3000/api/v1/messages
+Authorization: JustId 1
+
+{
+    "recipient": "+989101448207",
+    "text": "Your OTP is: 723895",
+    "isExpress": false
+}
+
 ### Charge Client Balance Webhook
 POST http://localhost:3000/webhook/v1/clients/balance
 Authorization: JustId 1

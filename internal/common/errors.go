@@ -11,6 +11,7 @@ var (
 	ErrNotFound         = errors.New("Resource not found")
 	ErrInternalDatabase = errors.New("Internal database error")
 	ErrInternal         = errors.New("Oops ! something went wrong")
+	ErrBadRequest       = errors.New("Bad request")
 )
 
 type AppError struct {
@@ -62,6 +63,17 @@ func UnauthorizedError(message string) *AppError {
 
 	return &AppError{
 		StatusCode: http.StatusUnauthorized,
+		Message:    message,
+	}
+}
+
+func BadRequestError(message string) *AppError {
+	if message == "" {
+		message = ErrBadRequest.Error()
+	}
+
+	return &AppError{
+		StatusCode: http.StatusBadRequest,
 		Message:    message,
 	}
 }

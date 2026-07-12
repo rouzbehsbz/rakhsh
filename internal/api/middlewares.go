@@ -9,8 +9,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const AuthorizationHeaderPrefix = "JustId "
-
 func AuthorizationMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		header := c.GetHeader("Authorization")
@@ -19,12 +17,12 @@ func AuthorizationMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		if !strings.HasPrefix(header, AuthorizationHeaderPrefix) {
+		if !strings.HasPrefix(header, common.AuthorizationHeaderPrefix) {
 			apiUtils.SendError(c, common.UnauthorizedError("Invalid authorization header"))
 			return
 		}
 
-		sClientId := strings.TrimPrefix(header, AuthorizationHeaderPrefix)
+		sClientId := strings.TrimPrefix(header, common.AuthorizationHeaderPrefix)
 
 		clientId, err := strconv.Atoi(sClientId)
 		if err != nil {

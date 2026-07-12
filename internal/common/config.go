@@ -9,14 +9,13 @@ import (
 )
 
 type Config struct {
-	Host string `mapstructure:"HOST"`
-	Port uint16 `mapstructure:"PORT"`
+	MachineId uint16 `mapstructure:"MACHINE_ID"`
+	Host      string `mapstructure:"HOST"`
+	Port      uint16 `mapstructure:"PORT"`
 
-	PostgresHost           string `mapstructure:"POSTGRES_HOST"`
-	PostgresPort           uint16 `mapstructure:"POSTGRES_PORT"`
-	PostgresUsername       string `mapstructure:"POSTGRES_USERNAME"`
-	PostgresPassword       string `mapstructure:"POSTGRES_PASSWORD"`
-	PostgresDatabaseName   string `mapstructure:"POSTGRES_DATABASE_NAME"`
+	PostgresShard1         string `mapstructure:"POSTGRES_SHARD_1"`
+	PostgresShard2         string `mapstructure:"POSTGRES_SHARD_2"`
+	PostgresShard3         string `mapstructure:"POSTGRES_SHARD_3"`
 	PostgresMaxConnections int    `mapstructure:"POSTGRES_MAX_CONNECTIONS"`
 }
 

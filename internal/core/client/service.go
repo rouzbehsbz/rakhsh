@@ -18,8 +18,8 @@ func NewClientService(repository *ClientRepository) *ClientService {
 	}
 }
 
-func (c *ClientService) GetClientInfo(ctx context.Context, id int32) (GetClientInfoOutput, error) {
-	client, err := c.repository.FindClientById(ctx, id)
+func (c *ClientService) GetClientInfo(ctx context.Context, clientId int32) (GetClientInfoOutput, error) {
+	client, err := c.repository.FindClientById(ctx, clientId)
 	if err != nil {
 		if errors.Is(err, common.ErrNotFound) {
 			return GetClientInfoOutput{}, common.NotFoundError("client does not exists")
@@ -34,8 +34,8 @@ func (c *ClientService) GetClientInfo(ctx context.Context, id int32) (GetClientI
 	}, nil
 }
 
-func (c *ClientService) ChargeBalance(ctx context.Context, id int32, amount decimal.Decimal) error {
-	_, err := c.repository.FindClientById(ctx, id)
+func (c *ClientService) ChargeBalance(ctx context.Context, clientId int32, amount decimal.Decimal) error {
+	_, err := c.repository.FindClientById(ctx, clientId)
 	if err != nil {
 		if errors.Is(err, common.ErrNotFound) {
 			return common.NotFoundError("client does not exists")
@@ -44,7 +44,7 @@ func (c *ClientService) ChargeBalance(ctx context.Context, id int32, amount deci
 		return common.InternalError("")
 	}
 
-	err = c.repository.UpdateBalanceByAmount(ctx, id, amount)
+	err = c.repository.UpdateBalanceByAmount(ctx, clientId, amount)
 	if err != nil {
 		return common.InternalError("")
 	}

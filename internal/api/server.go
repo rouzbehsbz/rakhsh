@@ -6,22 +6,24 @@ import (
 	apiUtils "rakhsh/internal/api/utils"
 	"rakhsh/internal/common"
 	"rakhsh/internal/core/client"
+	"rakhsh/internal/core/message"
 
 	"github.com/gin-gonic/gin"
 )
 
-type ServerOpts struct {
-	ClientHandler *client.ClientHandler
+type RootHandlers struct {
+	ClientHandler  *client.ClientHandler
+	MessageHandler *message.MessageHandler
 }
 
 type Server struct {
 	engine *gin.Engine
 	server *http.Server
 
-	clientHandler *client.ClientHandler
+	rootHandlers RootHandlers
 }
 
-func NewServer(host string, port uint16, opts ServerOpts) *Server {
+func NewServer(host string, port uint16, rootHandlers RootHandlers) *Server {
 	engine := gin.New()
 
 	s := &Server{
@@ -30,7 +32,7 @@ func NewServer(host string, port uint16, opts ServerOpts) *Server {
 			Addr:    fmt.Sprintf("%s:%d", host, port),
 			Handler: engine,
 		},
-		clientHandler: opts.ClientHandler,
+		rootHandlers: rootHandlers,
 	}
 
 	s.registerMiddlewares()
@@ -69,7 +71,11 @@ func (s *Server) registerRoutes() {
 		{
 			clients := v1.Group("/clients")
 			{
-				clients.GET("/self", AuthorizationMiddleware(), s.clientHandler.GetSelfClientInfoHandler)
+				clients.GET("/self", AuthorizationMiddleware(), s.rootHandlers.ClientHandler.GetSelfClientInfoHandler)
+			}
+			messages := v1.Group("/messages")
+			{
+				messages.POST("", AuthorizationMiddleware(), s.rootHandlers.MessageHandler.PostMessage)
 			}
 		}
 	}
@@ -80,7 +86,7 @@ func (s *Server) registerRoutes() {
 		{
 			clients := v1.Group("/clients")
 			{
-				clients.POST("/balance", AuthorizationMiddleware(), s.clientHandler.ChargeBalanceWebhook)
+				clients.POST("/balance", AuthorizationMiddleware(), s.rootHandlers.ClientHandler.ChargeBalanceWebhook)
 			}
 		}
 	}

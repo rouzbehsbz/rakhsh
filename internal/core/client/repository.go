@@ -12,17 +12,20 @@ import (
 )
 
 type ClientRepository struct {
-	q *postgresDb.Queries
+	db *postgres.Postgres
 }
 
-func NewClientRepository(q *postgresDb.Queries) *ClientRepository {
+func NewClientRepository(db *postgres.Postgres) *ClientRepository {
 	return &ClientRepository{
-		q: q,
+		db: db,
 	}
 }
 
 func (c *ClientRepository) FindClientById(ctx context.Context, id int32) (Client, error) {
-	pgClient, err := c.q.FindClientById(ctx, id)
+	shard := c.db.GetShard(id)
+	q := postgres.ExtractTxQuery(shard.MasterQ, ctx)
+
+	pgClient, err := q.FindClientById(ctx, id)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return Client{}, common.ErrNotFound
@@ -35,12 +38,15 @@ func (c *ClientRepository) FindClientById(ctx context.Context, id int32) (Client
 }
 
 func (c *ClientRepository) UpdateBalanceByAmount(ctx context.Context, id int32, amount decimal.Decimal) error {
+	shard := c.db.GetShard(id)
+	q := postgres.ExtractTxQuery(shard.MasterQ, ctx)
+
 	balance, err := postgres.MapDecimalToPgNumeric(amount)
 	if err != nil {
 		return err
 	}
 
-	err = c.q.UpdateBalanceByAmount(ctx, postgresDb.UpdateBalanceByAmountParams{
+	err = q.UpdateBalanceByAmount(ctx, postgresDb.UpdateBalanceByAmountParams{
 		ID:      id,
 		Balance: balance,
 	})
