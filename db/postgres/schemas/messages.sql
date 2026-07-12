@@ -5,7 +5,7 @@
 -- 0: Internal Error, 1: Operator Error, 2: 
 
 CREATE TABLE IF NOT EXISTS "messages" (
-    uid BIGINT  ,
+    uid BIGINT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     client_id INT NOT NULL,

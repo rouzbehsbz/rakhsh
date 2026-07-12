@@ -10,6 +10,7 @@ var (
 	ErrUnauthorized     = errors.New("Unauthorized")
 	ErrNotFound         = errors.New("Resource not found")
 	ErrInternalDatabase = errors.New("Internal database error")
+	ErrInternalQueue    = errors.New("Internal queue error")
 	ErrInternal         = errors.New("Oops ! something went wrong")
 	ErrBadRequest       = errors.New("Bad request")
 )

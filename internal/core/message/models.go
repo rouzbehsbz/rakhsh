@@ -21,20 +21,21 @@ const (
 type MessageReason int16
 
 const (
-	InternalErrorMessageReason MessageReason = iota
+	NullMessageReason MessageReason = iota
+	InternalErrorMessageReason
 	OperatorErrorMessageReason
 )
 
 type Message struct {
-	Uid       uint64
-	ClientId  int32
-	Recipient string
-	Text      string
-	IsExpress bool
-	Status    MessageStatus
-	Reason    MessageReason
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	Uid       uint64        `json:"uid"`
+	ClientId  int32         `json:"clientId"`
+	Recipient string        `json:"recipient"`
+	Text      string        `json:"text"`
+	IsExpress bool          `json:"isExpress"`
+	Status    MessageStatus `json:"status"`
+	Reason    MessageReason `json:"reason"`
+	CreatedAt time.Time     `json:"createdAt"`
+	UpdatedAt time.Time     `json:"updatedAt"`
 }
 
 func NewMessage(clientId int32, recipient, text string, isExpress bool) (Message, error) {
@@ -60,6 +61,14 @@ func (m *Message) GetUidString() string {
 	return str
 }
 
+func (m *Message) IsPending() bool {
+	if m.Status == PendingMessageStatus {
+		return true
+	}
+
+	return false
+}
+
 func MapMessageToPgMessage(message *Message) postgresDb.Message {
 	return postgresDb.Message{
 		Uid:       int64(message.Uid),
@@ -71,5 +80,19 @@ func MapMessageToPgMessage(message *Message) postgresDb.Message {
 		IsExpress: message.IsExpress,
 		Recipient: message.Recipient,
 		Text:      message.Text,
+	}
+}
+
+func MapPgMessageToMessage(pgMessage *postgresDb.Message) Message {
+	return Message{
+		Uid:       uint64(pgMessage.Uid),
+		ClientId:  pgMessage.ClientID,
+		Recipient: pgMessage.Recipient,
+		Text:      pgMessage.Text,
+		IsExpress: pgMessage.IsExpress,
+		Status:    MessageStatus(pgMessage.Status),
+		Reason:    MessageReason(pgMessage.Reason.Int16),
+		CreatedAt: pgMessage.CreatedAt.Time,
+		UpdatedAt: pgMessage.UpdatedAt.Time,
 	}
 }

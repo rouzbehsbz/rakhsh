@@ -6,7 +6,9 @@ import (
 	"rakhsh/internal/common"
 	"rakhsh/internal/core/client"
 	"rakhsh/internal/core/message"
+	"rakhsh/internal/core/operator"
 	"rakhsh/pkg/postgres"
+	"rakhsh/pkg/rabbitmq"
 
 	"github.com/godruoyi/go-snowflake"
 )
@@ -22,22 +24,40 @@ func main() {
 	celebritiesShard := map[int32]int{}
 
 	postgres, err := postgres.NewPostgresService([]string{
-		config.PostgresShard1,
-		config.PostgresShard2,
-		config.PostgresShard3,
+		config.PostgresShard1Url,
+		config.PostgresShard2Url,
+		config.PostgresShard3Url,
 	}, celebritiesShard, config.PostgresMaxConnections)
 	if err != nil {
 		panic(err)
 	}
 
+	rabbitmq, err := rabbitmq.NewRabbitmq(config.RabbitmqUrl)
+	if err != nil {
+		panic(err)
+	}
+
 	clientRepository := client.NewClientRepository(postgres)
-	messageRepository := message.NewMessageRepository(postgres)
+	messageRepository := message.NewMessageRepository(postgres, rabbitmq)
+
+	operatorService := operator.NewOperatorService()
+	operatorService.RegisterOperator(operator.NewDummyOperator())
+	operatorService.RegisterOperator(operator.NewDummyOperator())
+	operatorService.RegisterOperator(operator.NewDummyOperator())
 
 	clientService := client.NewClientService(clientRepository)
-	messageService := message.NewMessageService(postgres, clientRepository, messageRepository)
+	messageService := message.NewMessageService(postgres, clientRepository, messageRepository, operatorService)
 
 	clientHandler := client.NewClientHandler(clientService)
 	messageHandler := message.NewMessageHandler(messageService)
+
+	if err := rabbitmq.AddQueue(common.PendingMessagesQueueName, messageService.ProcessPendingMessage); err != nil {
+		panic(err)
+	}
+
+	if err := rabbitmq.StartQueueConsumers(common.PendingMessagesQueueName, config.RabbitmqMaxWorkers); err != nil {
+		panic(err)
+	}
 
 	server := api.NewServer(config.Host, config.Port, api.RootHandlers{
 		ClientHandler:  clientHandler,

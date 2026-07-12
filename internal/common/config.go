@@ -13,10 +13,13 @@ type Config struct {
 	Host      string `mapstructure:"HOST"`
 	Port      uint16 `mapstructure:"PORT"`
 
-	PostgresShard1         string `mapstructure:"POSTGRES_SHARD_1"`
-	PostgresShard2         string `mapstructure:"POSTGRES_SHARD_2"`
-	PostgresShard3         string `mapstructure:"POSTGRES_SHARD_3"`
+	PostgresShard1Url      string `mapstructure:"POSTGRES_SHARD_1_URL"`
+	PostgresShard2Url      string `mapstructure:"POSTGRES_SHARD_2_URL"`
+	PostgresShard3Url      string `mapstructure:"POSTGRES_SHARD_3_URL"`
 	PostgresMaxConnections int    `mapstructure:"POSTGRES_MAX_CONNECTIONS"`
+
+	RabbitmqUrl        string `mapstructure:"RABBITMQ_URL"`
+	RabbitmqMaxWorkers int    `mapstructure:"RABBITMQ_MAX_WORKERS"`
 }
 
 func NewConfig(isDevMode bool) (*Config, error) {

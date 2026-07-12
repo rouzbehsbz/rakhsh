@@ -2,24 +2,37 @@ package message
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"rakhsh/internal/common"
 	"rakhsh/internal/core/client"
 
+	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/shopspring/decimal"
 )
+
+type Operator interface {
+	Send(message *Message) error
+}
 
 type MessageService struct {
 	transctionManager common.Transactional
 	clientRepository  *client.ClientRepository
 	messageRepository *MessageRepository
+	operatorService   Operator
 }
 
-func NewMessageService(transctionManager common.Transactional, clientRepository *client.ClientRepository, messageRepository *MessageRepository) *MessageService {
+func NewMessageService(
+	transctionManager common.Transactional,
+	clientRepository *client.ClientRepository,
+	messageRepository *MessageRepository,
+	operatorService Operator,
+) *MessageService {
 	return &MessageService{
 		transctionManager: transctionManager,
 		clientRepository:  clientRepository,
 		messageRepository: messageRepository,
+		operatorService:   operatorService,
 	}
 }
 
@@ -52,7 +65,7 @@ func (m *MessageService) PostMessage(ctx context.Context, input PostMessageInput
 		}
 
 		if err := m.messageRepository.InsertMessage(txCtx, &message); err != nil {
-			return common.InternalError(err.Error())
+			return common.InternalError("")
 		}
 
 		messageUid = message.GetUidString()
@@ -66,6 +79,27 @@ func (m *MessageService) PostMessage(ctx context.Context, input PostMessageInput
 	return PostMessageOutput{
 		Uid: messageUid,
 	}, nil
+}
+
+func (m *MessageService) ProcessPendingMessage(delivery amqp.Delivery) error {
+	defer func() {
+
+	}()
+
+	var message Message
+	if err := json.Unmarshal(delivery.Body, &message); err != nil {
+		return common.InternalError("can't unmarshal delivered message")
+	}
+
+	if !message.IsPending() {
+		return common.InternalError("delivered message must be in pending status")
+	}
+
+	if err := m.operatorService.Send(&message); err != nil {
+		return common.InternalError("can't send to the operator")
+	}
+
+	return nil
 }
 
 func (m *MessageService) GetMessage(ctx context.Context, clientId int, messageId string) (GetMessageOutput, error) {
