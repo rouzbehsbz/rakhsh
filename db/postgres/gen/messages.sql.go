@@ -53,3 +53,23 @@ func (q *Queries) InsertMessage(ctx context.Context, arg InsertMessageParams) er
 	)
 	return err
 }
+
+const updateMessage = `-- name: UpdateMessage :exec
+UPDATE messages
+SET
+    status = $1,
+    reason = $2,
+    updated_at = NOW()
+WHERE uid = $3
+`
+
+type UpdateMessageParams struct {
+	Status int16
+	Reason pgtype.Int2
+	Uid    int64
+}
+
+func (q *Queries) UpdateMessage(ctx context.Context, arg UpdateMessageParams) error {
+	_, err := q.db.Exec(ctx, updateMessage, arg.Status, arg.Reason, arg.Uid)
+	return err
+}

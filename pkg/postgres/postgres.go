@@ -62,15 +62,15 @@ func (p *Postgres) WithinTx(ctx context.Context, clientID int32, fn func(ctx con
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 
-	defer tx.Rollback(ctx)
-
 	txCtx := context.WithValue(ctx, txKey{}, tx)
 
 	if err := fn(txCtx); err != nil {
+		tx.Rollback(ctx)
 		return err
 	}
 
 	if err := tx.Commit(ctx); err != nil {
+		tx.Rollback(ctx)
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 

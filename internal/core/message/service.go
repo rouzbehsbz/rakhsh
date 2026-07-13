@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"rakhsh/internal/common"
 	"rakhsh/internal/core/client"
+	"strconv"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/shopspring/decimal"
@@ -37,7 +39,7 @@ func NewMessageService(
 }
 
 func (m *MessageService) PostMessage(ctx context.Context, input PostMessageInput) (PostMessageOutput, error) {
-	var messageUid string
+	var message Message
 
 	err := m.transctionManager.WithinTx(ctx, input.ClientId, func(txCtx context.Context) error {
 		client, err := m.clientRepository.FindClientById(txCtx, input.ClientId)
@@ -59,7 +61,7 @@ func (m *MessageService) PostMessage(ctx context.Context, input PostMessageInput
 			return common.InternalError("")
 		}
 
-		message, err := NewMessage(input.ClientId, input.Recipient, input.Text, input.IsExpress)
+		message, err = NewMessage(input.ClientId, input.Recipient, input.Text, input.IsExpress)
 		if err != nil {
 			return common.InternalError("")
 		}
@@ -68,26 +70,28 @@ func (m *MessageService) PostMessage(ctx context.Context, input PostMessageInput
 			return common.InternalError("")
 		}
 
-		messageUid = message.GetUidString()
-
 		return nil
 	})
 	if err != nil {
 		return PostMessageOutput{}, err
 	}
 
+	if err := m.messageRepository.PublishMessageInQueue(ctx, &message); err != nil {
+		return PostMessageOutput{
+			Uid: message.GetUidString(),
+		}, nil
+	}
+
 	return PostMessageOutput{
-		Uid: messageUid,
+		Uid: message.GetUidString(),
 	}, nil
 }
 
 func (m *MessageService) ProcessPendingMessage(delivery amqp.Delivery) error {
-	defer func() {
+	ctx := context.Background()
 
-	}()
-
-	var message Message
-	if err := json.Unmarshal(delivery.Body, &message); err != nil {
+	message := &Message{}
+	if err := json.Unmarshal(delivery.Body, message); err != nil {
 		return common.InternalError("can't unmarshal delivered message")
 	}
 
@@ -95,10 +99,41 @@ func (m *MessageService) ProcessPendingMessage(delivery amqp.Delivery) error {
 		return common.InternalError("delivered message must be in pending status")
 	}
 
-	if err := m.operatorService.Send(&message); err != nil {
-		return common.InternalError("can't send to the operator")
+	err := m.transctionManager.WithinTx(ctx, message.ClientId, func(txCtx context.Context) error {
+		message.SetStatus(SubmittedMessageStatus)
+
+		if err := m.messageRepository.UpdateMessage(txCtx, message); err != nil {
+			return common.InternalError(fmt.Sprintf("%d", InternalErrorMessageReason))
+		}
+
+		if err := m.operatorService.Send(message); err != nil {
+			return common.InternalError(fmt.Sprintf("%d", OperatorErrorMessageReason))
+		}
+
+		return nil
+	})
+	if err != nil {
+		reason, err := strconv.Atoi(err.Error())
+		if err != nil {
+			reason = int(InternalErrorMessageReason)
+		}
+
+		message.SetStatus(RejectedMessageStatus)
+		message.SetReason(MessageReason(reason))
+
+		if updateErr := m.messageRepository.UpdateMessage(ctx, message); updateErr != nil {
+			return common.InternalError("")
+		}
+
+		if publishErr := m.messageRepository.PublishMessageInQueue(ctx, message); publishErr != nil {
+			return common.InternalError("")
+		}
 	}
 
+	return err
+}
+
+func (m *MessageService) ProcessRejectedMessage(delivery amqp.Delivery) error {
 	return nil
 }
 

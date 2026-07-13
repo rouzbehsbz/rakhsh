@@ -2,6 +2,7 @@ package message
 
 import (
 	postgresDb "rakhsh/db/postgres/gen"
+	"rakhsh/internal/common"
 	"rakhsh/pkg/postgres"
 	"strconv"
 	"time"
@@ -69,6 +70,25 @@ func (m *Message) IsPending() bool {
 	return false
 }
 
+func (m *Message) SetStatus(status MessageStatus) {
+	m.Status = status
+}
+
+func (m *Message) SetReason(reason MessageReason) {
+	m.Reason = reason
+}
+
+func (m *Message) GetQueueName() string {
+	switch m.Status {
+	case PendingMessageStatus:
+		return common.PendingMessagesQueueName
+	case RejectedMessageStatus:
+		return common.RejectedMessagesQueueName
+	default:
+		return ""
+	}
+}
+
 func MapMessageToPgMessage(message *Message) postgresDb.Message {
 	return postgresDb.Message{
 		Uid:       int64(message.Uid),
@@ -76,7 +96,7 @@ func MapMessageToPgMessage(message *Message) postgresDb.Message {
 		UpdatedAt: postgres.TimeToPgTimestampz(message.UpdatedAt),
 		ClientID:  message.ClientId,
 		Status:    int16(message.Status),
-		Reason:    postgres.IntToPgInt2(0, false),
+		Reason:    postgres.IntToPgInt2(int16(message.Reason), false),
 		IsExpress: message.IsExpress,
 		Recipient: message.Recipient,
 		Text:      message.Text,

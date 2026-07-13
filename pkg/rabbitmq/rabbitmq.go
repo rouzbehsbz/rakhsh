@@ -109,7 +109,7 @@ func (r *Rabbitmq) StartQueueConsumers(name string, count int) error {
 
 				err := queue.Handler(msg)
 				if err != nil {
-					msg.Nack(false, true)
+					msg.Nack(false, false)
 					continue
 				}
 

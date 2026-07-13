@@ -54,6 +54,9 @@ func main() {
 	if err := rabbitmq.AddQueue(common.PendingMessagesQueueName, messageService.ProcessPendingMessage); err != nil {
 		panic(err)
 	}
+	if err := rabbitmq.AddQueue(common.RejectedMessagesQueueName, messageService.ProcessRejectedMessage); err != nil {
+		panic(err)
+	}
 
 	if err := rabbitmq.StartQueueConsumers(common.PendingMessagesQueueName, config.RabbitmqMaxWorkers); err != nil {
 		panic(err)

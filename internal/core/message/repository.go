@@ -32,6 +32,28 @@ func (m *MessageRepository) InsertMessage(ctx context.Context, message *Message)
 		return common.ErrInternalDatabase
 	}
 
+	return nil
+}
+
+func (m *MessageRepository) UpdateMessage(ctx context.Context, message *Message) error {
+	shard := m.db.GetShard(message.ClientId)
+	q := postgres.ExtractTxQuery(shard.MasterQ, ctx)
+
+	pgMessage := MapMessageToPgMessage(message)
+
+	err := q.UpdateMessage(ctx, postgresDb.UpdateMessageParams{
+		Status: pgMessage.Status,
+		Reason: pgMessage.Reason,
+		Uid:    pgMessage.Uid,
+	})
+	if err != nil {
+		return common.ErrInternalDatabase
+	}
+
+	return nil
+}
+
+func (m *MessageRepository) PublishMessageInQueue(ctx context.Context, message *Message) error {
 	body, err := json.Marshal(message)
 	if err != nil {
 		return err
@@ -42,7 +64,7 @@ func (m *MessageRepository) InsertMessage(ctx context.Context, message *Message)
 		priority = 5
 	}
 
-	return m.queue.Publish(ctx, common.PendingMessagesQueueName, amqp.Publishing{
+	return m.queue.Publish(ctx, message.GetQueueName(), amqp.Publishing{
 		ContentType: "application/json",
 		Body:        body,
 		Priority:    priority,

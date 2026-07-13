@@ -12,3 +12,11 @@ INSERT INTO "messages" (
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9
 );
+
+-- name: UpdateMessage :exec
+UPDATE messages
+SET
+    status = $1,
+    reason = $2,
+    updated_at = NOW()
+WHERE uid = $3;

@@ -47,7 +47,7 @@ func NewDummyOperator() *DummyOperator {
 }
 
 func (d *DummyOperator) Send(message *message.Message) error {
-	n := rand.Intn(10)
+	n := rand.Intn(2)
 	t := 30 + rand.Intn(70)
 
 	var err error
