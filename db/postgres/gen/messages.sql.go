@@ -11,6 +11,32 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const batchUpdateMessages = `-- name: BatchUpdateMessages :exec
+UPDATE messages AS m
+SET
+    status     = u.new_status,
+    reason     = u.new_reason,
+    updated_at = NOW()
+FROM (
+    SELECT 
+        UNNEST($1::bigint[])   AS target_uid,
+        UNNEST($2::smallint[]) AS new_status,
+        UNNEST($3::smallint[]) AS new_reason
+) AS u
+WHERE m.uid = u.target_uid
+`
+
+type BatchUpdateMessagesParams struct {
+	Column1 []int64
+	Column2 []int16
+	Column3 []int16
+}
+
+func (q *Queries) BatchUpdateMessages(ctx context.Context, arg BatchUpdateMessagesParams) error {
+	_, err := q.db.Exec(ctx, batchUpdateMessages, arg.Column1, arg.Column2, arg.Column3)
+	return err
+}
+
 const findMessageByUid = `-- name: FindMessageByUid :one
 SELECT uid, created_at, updated_at, client_id, status, reason, is_express, recipient, text FROM "messages" WHERE client_id = $1 AND uid = $2
 `

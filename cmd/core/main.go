@@ -73,6 +73,15 @@ func main() {
 	if err := rabbitmq.StartQueueConsumers(common.PendingMessagesQueueName, config.RabbitmqMaxWorkers); err != nil {
 		panic(err)
 	}
+	if err := rabbitmq.StartQueueConsumers(common.SubmittedMessagesQueueName, config.RabbitmqMaxWorkers); err != nil {
+		panic(err)
+	}
+	if err := rabbitmq.StartQueueConsumers(common.DeliveredMessageQueueName, config.RabbitmqMaxWorkers); err != nil {
+		panic(err)
+	}
+	if err := rabbitmq.StartQueueConsumers(common.RejectedMessagesQueueName, config.RabbitmqMaxWorkers); err != nil {
+		panic(err)
+	}
 
 	server := api.NewServer(config.Host, config.Port, api.RootHandlers{
 		ClientHandler:  clientHandler,

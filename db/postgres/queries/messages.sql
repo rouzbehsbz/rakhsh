@@ -21,5 +21,19 @@ SET
     updated_at = NOW()
 WHERE uid = $3;
 
+-- name: BatchUpdateMessages :exec
+UPDATE messages AS m
+SET
+    status     = u.new_status,
+    reason     = u.new_reason,
+    updated_at = NOW()
+FROM (
+    SELECT 
+        UNNEST($1::bigint[])   AS target_uid,
+        UNNEST($2::smallint[]) AS new_status,
+        UNNEST($3::smallint[]) AS new_reason
+) AS u
+WHERE m.uid = u.target_uid;
+
 -- name: FindMessageByUid :one
 SELECT * FROM "messages" WHERE client_id = $1 AND uid = $2;

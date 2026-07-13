@@ -72,6 +72,44 @@ func (m *MessageRepository) UpdateMessage(ctx context.Context, message *Message)
 	return nil
 }
 
+func (m *MessageRepository) BatchUpdateMessages(ctx context.Context, updates []Message) error {
+	shards := make(map[int32][]Message)
+	for _, msg := range updates {
+		shards[msg.ClientId] = append(shards[msg.ClientId], msg)
+	}
+
+	for clientId, shardMessages := range shards {
+		shard := m.db.GetShard(clientId)
+		q := postgres.ExtractTxQuery(shard.MasterQ, ctx)
+
+		uids := make([]int64, len(shardMessages))
+		statuses := make([]int16, len(shardMessages))
+		reasons := make([]int16, len(shardMessages))
+		cacheKeys := make([]string, len(shardMessages))
+
+		for i, msg := range shardMessages {
+			uids[i] = int64(msg.Uid)
+			statuses[i] = int16(msg.Status)
+			reasons[i] = int16(msg.Reason)
+
+			cacheKeys[i] = messageKey(msg.ClientId, msg.Uid)
+		}
+
+		err := q.BatchUpdateMessages(ctx, postgresDb.BatchUpdateMessagesParams{
+			Column1: uids,
+			Column2: statuses,
+			Column3: reasons,
+		})
+		if err != nil {
+			return common.ErrInternalDatabase
+		}
+
+		_ = m.cache.DeleteMany(ctx, cacheKeys...)
+	}
+
+	return nil
+}
+
 func (m *MessageRepository) FindMessageByUid(ctx context.Context, clientId int32, uid uint64) (Message, error) {
 	key := messageKey(clientId, uid)
 
@@ -124,6 +162,18 @@ func (m *MessageRepository) PublishMessageInQueue(ctx context.Context, message *
 		ContentType: "application/json",
 		Body:        body,
 		Priority:    priority,
+	})
+}
+
+func (m *MessageRepository) PublishSubmittedMessageInQueue(ctx context.Context, submittedMessage *SubmittedMessage) error {
+	body, err := json.Marshal(submittedMessage)
+	if err != nil {
+		return err
+	}
+
+	return m.queue.Publish(ctx, common.SubmittedMessagesQueueName, amqp.Publishing{
+		ContentType: "application/json",
+		Body:        body,
 	})
 }
 

@@ -4,14 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"rakhsh/internal/common"
 	"rakhsh/internal/core/client"
 	"strconv"
+	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/shopspring/decimal"
 )
+
+const BatchUpdatesBufferSize = 1024
+const BatchUpdatesFlushInterval = 10 * time.Second
+const BatchUpdatesSize = 100
 
 type Operator interface {
 	Send(message *Message) error
@@ -22,6 +26,8 @@ type MessageService struct {
 	clientRepository  *client.ClientRepository
 	messageRepository *MessageRepository
 	operatorService   Operator
+
+	batchUpdatesCh chan Message
 }
 
 func NewMessageService(
@@ -30,12 +36,19 @@ func NewMessageService(
 	messageRepository *MessageRepository,
 	operatorService Operator,
 ) *MessageService {
-	return &MessageService{
+	m := &MessageService{
 		transctionManager: transctionManager,
 		clientRepository:  clientRepository,
 		messageRepository: messageRepository,
 		operatorService:   operatorService,
+		batchUpdatesCh:    make(chan Message, BatchUpdatesBufferSize),
 	}
+
+	ctx := context.Background()
+
+	go m.batchUpdater(ctx)
+
+	return m
 }
 
 func (m *MessageService) PostMessage(ctx context.Context, input PostMessageInput) (PostMessageOutput, error) {
@@ -101,19 +114,9 @@ func (m *MessageService) ProcessPendingMessage(delivery amqp.Delivery) {
 		return
 	}
 
-	err := m.transctionManager.WithinTx(ctx, message.ClientId, func(txCtx context.Context) error {
-		message.SetStatus(SubmittedMessageStatus)
+	message.SetStatus(SubmittedMessageStatus)
 
-		if err := m.messageRepository.UpdateMessage(txCtx, message); err != nil {
-			return common.InternalError(fmt.Sprintf("%d", InternalErrorMessageReason))
-		}
-
-		if err := m.operatorService.Send(message); err != nil {
-			return common.InternalError(fmt.Sprintf("%d", OperatorErrorMessageReason))
-		}
-
-		return nil
-	})
+	err := m.operatorService.Send(message)
 	if err != nil {
 		reason, err := strconv.Atoi(err.Error())
 		if err != nil {
@@ -123,12 +126,7 @@ func (m *MessageService) ProcessPendingMessage(delivery amqp.Delivery) {
 		message.SetStatus(RejectedMessageStatus)
 		message.SetReason(MessageReason(reason))
 
-		if updateErr := m.messageRepository.UpdateMessage(ctx, message); updateErr != nil {
-			delivery.Nack(false, true)
-			return
-		}
-
-		if publishErr := m.messageRepository.PublishMessageInQueue(ctx, message); publishErr != nil {
+		if err := m.messageRepository.PublishMessageInQueue(ctx, message); err != nil {
 			delivery.Nack(false, true)
 			return
 		}
@@ -140,28 +138,24 @@ func (m *MessageService) ProcessPendingMessage(delivery amqp.Delivery) {
 func (m *MessageService) ProcessSubmittedMessage(delivery amqp.Delivery) {
 	ctx := context.Background()
 
-	dMessage := &Message{}
-	if err := json.Unmarshal(delivery.Body, dMessage); err != nil {
+	submittedMessage := &SubmittedMessage{}
+	if err := json.Unmarshal(delivery.Body, submittedMessage); err != nil {
 		delivery.Nack(false, false)
 		return
 	}
 
-	if !dMessage.IsSubmitted() {
-		delivery.Ack(false)
-		return
-	}
-
-	lMessage, err := m.messageRepository.FindMessageByUid(ctx, dMessage.ClientId, dMessage.Uid)
+	message, err := m.messageRepository.FindMessageByUid(ctx, submittedMessage.ClientId, submittedMessage.Uid)
 	if err != nil {
 		delivery.Nack(false, true)
 		return
 	}
 
-	if !lMessage.IsDelivered() {
-		delivery.Nack(false, true)
+	message.SetStatus(submittedMessage.Status)
+	if message.IsRejected() {
+		message.SetReason(OperatorErrorMessageReason)
 	}
 
-	if publishErr := m.messageRepository.PublishMessageInQueue(ctx, &lMessage); publishErr != nil {
+	if publishErr := m.messageRepository.PublishMessageInQueue(ctx, &message); publishErr != nil {
 		delivery.Nack(false, true)
 		return
 	}
@@ -170,13 +164,70 @@ func (m *MessageService) ProcessSubmittedMessage(delivery amqp.Delivery) {
 }
 
 func (m *MessageService) ProcessDeliveredMessage(delivery amqp.Delivery) {
+	ctx := context.Background()
+
+	message := &Message{}
+	if err := json.Unmarshal(delivery.Body, message); err != nil {
+		delivery.Nack(false, false)
+		return
+	}
+
+	if err := m.messageRepository.UpdateMessage(ctx, message); err != nil {
+		delivery.Nack(false, true)
+		return
+	}
+
+	m.batchUpdatesCh <- *message
+
 	delivery.Ack(false)
 }
 
 func (m *MessageService) ProcessRejectedMessage(delivery amqp.Delivery) {
+	ctx := context.Background()
+
+	message := &Message{}
+	if err := json.Unmarshal(delivery.Body, message); err != nil {
+		delivery.Nack(false, false)
+		return
+	}
+
+	if err := m.messageRepository.UpdateMessage(ctx, message); err != nil {
+		delivery.Nack(false, true)
+		return
+	}
+
+	m.batchUpdatesCh <- *message
+
 	delivery.Ack(false)
 }
 
-func (m *MessageService) GetMessage(ctx context.Context, clientId int, messageId string) (GetMessageOutput, error) {
-	return GetMessageOutput{}, nil
+func (m *MessageService) batchUpdater(ctx context.Context) {
+	ticker := time.NewTicker(BatchUpdatesFlushInterval)
+	defer ticker.Stop()
+
+	updates := make([]Message, 0, BatchUpdatesSize)
+
+	for {
+		select {
+		case <-ctx.Done():
+			if len(updates) > 0 {
+				m.messageRepository.BatchUpdateMessages(ctx, updates)
+			}
+			return
+
+		case update := <-m.batchUpdatesCh:
+			updates = append(updates, update)
+
+			if len(updates) >= BatchUpdatesSize {
+				m.messageRepository.BatchUpdateMessages(ctx, updates)
+				updates = make([]Message, 0, BatchUpdatesSize)
+			}
+
+		case <-ticker.C:
+			if len(updates) > 0 {
+				m.messageRepository.BatchUpdateMessages(ctx, updates)
+				updates = make([]Message, 0, BatchUpdatesSize)
+			}
+		}
+	}
 }

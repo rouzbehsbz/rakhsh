@@ -78,6 +78,14 @@ func (m *Message) IsSubmitted() bool {
 	return false
 }
 
+func (m *Message) IsRejected() bool {
+	if m.Status == RejectedMessageStatus {
+		return true
+	}
+
+	return false
+}
+
 func (m *Message) IsDelivered() bool {
 	if m.Status == DeliveredMessageStatus {
 		return true
@@ -135,4 +143,10 @@ func MapPgMessageToMessage(pgMessage *postgresDb.Message) Message {
 		CreatedAt: pgMessage.CreatedAt.Time,
 		UpdatedAt: pgMessage.UpdatedAt.Time,
 	}
+}
+
+type SubmittedMessage struct {
+	Uid      uint64        `json:"uid"`
+	ClientId int32         `json:"clientId"`
+	Status   MessageStatus `json:"status"`
 }

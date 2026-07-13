@@ -18,5 +18,5 @@ type PostMessageOutput struct {
 }
 
 type GetMessageOutput struct {
-	Message Message `json:"message"`
+	Messages []Message `json:"message"`
 }
