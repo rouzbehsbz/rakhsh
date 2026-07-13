@@ -7,7 +7,7 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-type QueueHandler func(amqp.Delivery) error
+type QueueHandler func(amqp.Delivery)
 
 type Queue struct {
 	conn *amqp.Connection
@@ -106,14 +106,7 @@ func (r *Rabbitmq) StartQueueConsumers(name string, count int) error {
 
 		go func() {
 			for msg := range deliveries {
-
-				err := queue.Handler(msg)
-				if err != nil {
-					msg.Nack(false, false)
-					continue
-				}
-
-				msg.Ack(false)
+				queue.Handler(msg)
 			}
 		}()
 	}

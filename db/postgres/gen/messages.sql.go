@@ -11,6 +11,32 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const findMessageByUid = `-- name: FindMessageByUid :one
+SELECT uid, created_at, updated_at, client_id, status, reason, is_express, recipient, text FROM "messages" WHERE client_id = $1 AND uid = $2
+`
+
+type FindMessageByUidParams struct {
+	ClientID int32
+	Uid      int64
+}
+
+func (q *Queries) FindMessageByUid(ctx context.Context, arg FindMessageByUidParams) (Message, error) {
+	row := q.db.QueryRow(ctx, findMessageByUid, arg.ClientID, arg.Uid)
+	var i Message
+	err := row.Scan(
+		&i.Uid,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.ClientID,
+		&i.Status,
+		&i.Reason,
+		&i.IsExpress,
+		&i.Recipient,
+		&i.Text,
+	)
+	return i, err
+}
+
 const insertMessage = `-- name: InsertMessage :exec
 INSERT INTO "messages" (
     uid, 

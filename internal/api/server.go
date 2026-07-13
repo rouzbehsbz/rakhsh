@@ -8,6 +8,8 @@ import (
 	"rakhsh/internal/core/client"
 	"rakhsh/internal/core/message"
 
+	gzip "github.com/gin-contrib/gzip"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -54,6 +56,7 @@ func (s *Server) registerMiddlewares() {
 	})
 
 	s.engine.Use(
+		gzip.Gzip(gzip.DefaultCompression),
 		gin.Logger(),
 		RecoveryMiddleware(),
 		ErrorHandlerMiddleware(),

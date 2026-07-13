@@ -20,3 +20,6 @@ SET
     reason = $2,
     updated_at = NOW()
 WHERE uid = $3;
+
+-- name: FindMessageByUid :one
+SELECT * FROM "messages" WHERE client_id = $1 AND uid = $2;

@@ -70,6 +70,22 @@ func (m *Message) IsPending() bool {
 	return false
 }
 
+func (m *Message) IsSubmitted() bool {
+	if m.Status == SubmittedMessageStatus {
+		return true
+	}
+
+	return false
+}
+
+func (m *Message) IsDelivered() bool {
+	if m.Status == DeliveredMessageStatus {
+		return true
+	}
+
+	return false
+}
+
 func (m *Message) SetStatus(status MessageStatus) {
 	m.Status = status
 }
@@ -82,6 +98,10 @@ func (m *Message) GetQueueName() string {
 	switch m.Status {
 	case PendingMessageStatus:
 		return common.PendingMessagesQueueName
+	case SubmittedMessageStatus:
+		return common.SubmittedMessagesQueueName
+	case DeliveredMessageStatus:
+		return common.DeliveredMessageQueueName
 	case RejectedMessageStatus:
 		return common.RejectedMessagesQueueName
 	default:

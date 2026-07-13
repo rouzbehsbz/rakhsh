@@ -87,16 +87,18 @@ func (m *MessageService) PostMessage(ctx context.Context, input PostMessageInput
 	}, nil
 }
 
-func (m *MessageService) ProcessPendingMessage(delivery amqp.Delivery) error {
+func (m *MessageService) ProcessPendingMessage(delivery amqp.Delivery) {
 	ctx := context.Background()
 
 	message := &Message{}
 	if err := json.Unmarshal(delivery.Body, message); err != nil {
-		return common.InternalError("can't unmarshal delivered message")
+		delivery.Nack(false, false)
+		return
 	}
 
 	if !message.IsPending() {
-		return common.InternalError("delivered message must be in pending status")
+		delivery.Ack(false)
+		return
 	}
 
 	err := m.transctionManager.WithinTx(ctx, message.ClientId, func(txCtx context.Context) error {
@@ -122,19 +124,57 @@ func (m *MessageService) ProcessPendingMessage(delivery amqp.Delivery) error {
 		message.SetReason(MessageReason(reason))
 
 		if updateErr := m.messageRepository.UpdateMessage(ctx, message); updateErr != nil {
-			return common.InternalError("")
+			delivery.Nack(false, true)
+			return
 		}
 
 		if publishErr := m.messageRepository.PublishMessageInQueue(ctx, message); publishErr != nil {
-			return common.InternalError("")
+			delivery.Nack(false, true)
+			return
 		}
 	}
 
-	return err
+	delivery.Ack(false)
 }
 
-func (m *MessageService) ProcessRejectedMessage(delivery amqp.Delivery) error {
-	return nil
+func (m *MessageService) ProcessSubmittedMessage(delivery amqp.Delivery) {
+	ctx := context.Background()
+
+	dMessage := &Message{}
+	if err := json.Unmarshal(delivery.Body, dMessage); err != nil {
+		delivery.Nack(false, false)
+		return
+	}
+
+	if !dMessage.IsSubmitted() {
+		delivery.Ack(false)
+		return
+	}
+
+	lMessage, err := m.messageRepository.FindMessageByUid(ctx, dMessage.ClientId, dMessage.Uid)
+	if err != nil {
+		delivery.Nack(false, true)
+		return
+	}
+
+	if !lMessage.IsDelivered() {
+		delivery.Nack(false, true)
+	}
+
+	if publishErr := m.messageRepository.PublishMessageInQueue(ctx, &lMessage); publishErr != nil {
+		delivery.Nack(false, true)
+		return
+	}
+
+	delivery.Ack(false)
+}
+
+func (m *MessageService) ProcessDeliveredMessage(delivery amqp.Delivery) {
+	delivery.Ack(false)
+}
+
+func (m *MessageService) ProcessRejectedMessage(delivery amqp.Delivery) {
+	delivery.Ack(false)
 }
 
 func (m *MessageService) GetMessage(ctx context.Context, clientId int, messageId string) (GetMessageOutput, error) {

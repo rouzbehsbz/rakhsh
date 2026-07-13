@@ -53,6 +53,21 @@ func (m *MessageRepository) UpdateMessage(ctx context.Context, message *Message)
 	return nil
 }
 
+func (m *MessageRepository) FindMessageByUid(ctx context.Context, clientId int32, uid uint64) (Message, error) {
+	shard := m.db.GetShard(clientId)
+	q := postgres.ExtractTxQuery(shard.MasterQ, ctx)
+
+	pgMessage, err := q.FindMessageByUid(ctx, postgresDb.FindMessageByUidParams{
+		ClientID: clientId,
+		Uid:      int64(uid),
+	})
+	if err != nil {
+		return Message{}, common.ErrInternalDatabase
+	}
+
+	return MapPgMessageToMessage(&pgMessage), nil
+}
+
 func (m *MessageRepository) PublishMessageInQueue(ctx context.Context, message *Message) error {
 	body, err := json.Marshal(message)
 	if err != nil {
