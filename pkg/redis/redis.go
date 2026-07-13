@@ -3,6 +3,7 @@ package redis
 import (
 	"context"
 	"encoding/json"
+	"rakhsh/internal/common"
 	"time"
 
 	goRedis "github.com/redis/go-redis/v9"
@@ -31,6 +32,10 @@ func NewRedis(url string, password string, maxConnections int) (*Redis, error) {
 func (r *Redis) GetJson(ctx context.Context, key string, dest any) error {
 	res, err := r.Client.Get(ctx, key).Bytes()
 	if err != nil {
+		if err == goRedis.Nil {
+			return common.ErrNotFound
+		}
+
 		return err
 	}
 

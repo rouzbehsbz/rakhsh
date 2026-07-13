@@ -32,7 +32,7 @@ func (c *ClientRepository) FindClientById(ctx context.Context, id int32) (Client
 	key := clientKey(id)
 
 	var client Client
-	if err := c.cache.GetJson(ctx, key, &client); err != nil {
+	if err := c.cache.GetJson(ctx, key, &client); err != common.ErrNotFound {
 		return client, nil
 	}
 
