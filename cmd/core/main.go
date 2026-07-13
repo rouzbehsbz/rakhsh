@@ -9,6 +9,7 @@ import (
 	"rakhsh/internal/core/operator"
 	"rakhsh/pkg/postgres"
 	"rakhsh/pkg/rabbitmq"
+	"rakhsh/pkg/redis"
 
 	"github.com/godruoyi/go-snowflake"
 )
@@ -37,8 +38,13 @@ func main() {
 		panic(err)
 	}
 
-	clientRepository := client.NewClientRepository(postgres)
-	messageRepository := message.NewMessageRepository(postgres, rabbitmq)
+	redis, err := redis.NewRedis(config.RedisUrl, config.RedisPassword, config.RedisMaxConnections)
+	if err != nil {
+		panic(err)
+	}
+
+	clientRepository := client.NewClientRepository(postgres, redis)
+	messageRepository := message.NewMessageRepository(postgres, rabbitmq, redis)
 
 	operatorService := operator.NewOperatorService()
 	operatorService.RegisterOperator(operator.NewDummyOperator())

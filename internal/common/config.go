@@ -20,6 +20,10 @@ type Config struct {
 
 	RabbitmqUrl        string `mapstructure:"RABBITMQ_URL"`
 	RabbitmqMaxWorkers int    `mapstructure:"RABBITMQ_MAX_WORKERS"`
+
+	RedisUrl            string `mapstructure:"REDIS_URL"`
+	RedisPassword       string `mapstructure:"REDIS_PASSWORD"`
+	RedisMaxConnections int    `mapstructure:"REDIS_MAX_CONNECTIONS"`
 }
 
 func NewConfig(isDevMode bool) (*Config, error) {
