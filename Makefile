@@ -11,6 +11,11 @@ run-core:
 	@echo "Running core application ..."
 	go run cmd/core/main.go
 
+build-core:
+	@echo "Building the core project ..."
+	go build -o .bin/core cmd/core/main.go
+	@echo "Build Completed"
+
 sqlc-generate:
 	@echo "Generating sqlc source code ..."
 	@sqlc generate -f $(SQLC_CONFIG_PATH)

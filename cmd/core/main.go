@@ -47,7 +47,7 @@ func main() {
 	messageRepository := message.NewMessageRepository(postgres, rabbit, redis)
 
 	operatorService := operator.NewOperatorService()
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		operatorService.RegisterOperator(operator.NewDummyOperator())
 	}
 

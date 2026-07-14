@@ -19,6 +19,7 @@ const BatchUpdatesSize = 100
 
 type Operator interface {
 	Send(message *Message) error
+	Fetch(clientId int32, uids []uint64) ([]SubmittedMessage, error)
 }
 
 type MessageService struct {
@@ -27,7 +28,7 @@ type MessageService struct {
 	messageRepository *MessageRepository
 	operatorService   Operator
 
-	batchUpdatesCh chan Message
+	BatchUpdatesCh chan Message
 }
 
 func NewMessageService(
@@ -41,7 +42,7 @@ func NewMessageService(
 		clientRepository:  clientRepository,
 		messageRepository: messageRepository,
 		operatorService:   operatorService,
-		batchUpdatesCh:    make(chan Message, BatchUpdatesBufferSize),
+		BatchUpdatesCh:    make(chan Message, BatchUpdatesBufferSize),
 	}
 
 	ctx := context.Background()
@@ -188,7 +189,7 @@ func (m *MessageService) ProcessDeliveredMessage(delivery amqp.Delivery) {
 		return
 	}
 
-	m.batchUpdatesCh <- *message
+	m.BatchUpdatesCh <- *message
 
 	delivery.Ack(false)
 }
@@ -207,7 +208,7 @@ func (m *MessageService) ProcessRejectedMessage(delivery amqp.Delivery) {
 		return
 	}
 
-	m.batchUpdatesCh <- *message
+	m.BatchUpdatesCh <- *message
 
 	delivery.Ack(false)
 }
@@ -226,7 +227,7 @@ func (m *MessageService) batchUpdater(ctx context.Context) {
 			}
 			return
 
-		case update := <-m.batchUpdatesCh:
+		case update := <-m.BatchUpdatesCh:
 			updates = append(updates, update)
 
 			if len(updates) >= BatchUpdatesSize {

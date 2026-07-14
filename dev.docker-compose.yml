@@ -1,0 +1,74 @@
+services:
+  core:
+    build:
+      context: .
+      dockerfile: core.Dockerfile
+    container_name: rakhsh-core
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: rakhsh-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: rakhsh
+    ports:
+      - "5432:5432"
+    volumes:
+      - rakhsh-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d rakhsh"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    container_name: rakhsh-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: root
+      RABBITMQ_DEFAULT_PASS: root
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rakhsh-rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:8-alpine
+    container_name: rakhsh-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass root
+    ports:
+      - "6379:6379"
+    volumes:
+      - rakhsh-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "redis_password", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  rakhsh-postgres-data:
+  rakhsh-rabbitmq-data:
+  rakhsh-redis-data:
