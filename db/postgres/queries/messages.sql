@@ -37,3 +37,6 @@ WHERE m.uid = u.target_uid;
 
 -- name: FindMessageByUid :one
 SELECT * FROM "messages" WHERE client_id = $1 AND uid = $2;
+
+-- name: FindAllMessagesByUids :many
+SELECT * FROM messages WHERE client_id = $1 AND uid = ANY($2::bigint[]);

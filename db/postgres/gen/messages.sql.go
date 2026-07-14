@@ -37,6 +37,45 @@ func (q *Queries) BatchUpdateMessages(ctx context.Context, arg BatchUpdateMessag
 	return err
 }
 
+const findAllMessagesByUids = `-- name: FindAllMessagesByUids :many
+SELECT uid, created_at, updated_at, client_id, status, reason, is_express, recipient, text FROM messages WHERE client_id = $1 AND uid = ANY($2::bigint[])
+`
+
+type FindAllMessagesByUidsParams struct {
+	ClientID int32
+	Column2  []int64
+}
+
+func (q *Queries) FindAllMessagesByUids(ctx context.Context, arg FindAllMessagesByUidsParams) ([]Message, error) {
+	rows, err := q.db.Query(ctx, findAllMessagesByUids, arg.ClientID, arg.Column2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Message
+	for rows.Next() {
+		var i Message
+		if err := rows.Scan(
+			&i.Uid,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.ClientID,
+			&i.Status,
+			&i.Reason,
+			&i.IsExpress,
+			&i.Recipient,
+			&i.Text,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const findMessageByUid = `-- name: FindMessageByUid :one
 SELECT uid, created_at, updated_at, client_id, status, reason, is_express, recipient, text FROM "messages" WHERE client_id = $1 AND uid = $2
 `

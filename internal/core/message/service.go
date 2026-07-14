@@ -100,6 +100,17 @@ func (m *MessageService) PostMessage(ctx context.Context, input PostMessageInput
 	}, nil
 }
 
+func (m *MessageService) GetReports(ctx context.Context, clientId int32, messageUids []uint64) (GetReportsOutput, error) {
+	messages, err := m.messageRepository.FindAllMessagesByUids(ctx, clientId, messageUids)
+	if err != nil {
+		return GetReportsOutput{}, common.InternalError("")
+	}
+
+	return GetReportsOutput{
+		Messages: messages,
+	}, nil
+}
+
 func (m *MessageService) ProcessPendingMessage(delivery amqp.Delivery) {
 	ctx := context.Background()
 

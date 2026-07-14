@@ -15,8 +15,8 @@ Authorization: JustId 1
     "isExpress": false
 }
 
-### Get Analytical Reports
-GET http://localhost:3000/api/v1/messages/analyticals/realtime
+### Get Reports
+GET http://localhost:3000/api/v1/messages/reports?uids=2338963501222985728&uids=2338967296757727232&uids=2338967417721454592
 Authorization: JustId 1
 
 ### Charge Client Balance Webhook

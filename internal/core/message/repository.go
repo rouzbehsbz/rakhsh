@@ -147,6 +147,58 @@ func (m *MessageRepository) FindMessageByUid(ctx context.Context, clientId int32
 	return message, nil
 }
 
+func (m *MessageRepository) FindAllMessagesByUids(ctx context.Context, clientId int32, uids []uint64) ([]Message, error) {
+	messages := make([]Message, 0, len(uids))
+	missing := make([]uint64, 0)
+
+	for _, uid := range uids {
+		key := messageKey(clientId, uid)
+
+		var cached Message
+		if err := m.cache.GetJson(ctx, key, &cached); err == nil {
+			messages = append(messages, cached)
+			continue
+		}
+
+		missing = append(missing, uid)
+	}
+
+	if len(missing) == 0 {
+		return messages, nil
+	}
+
+	pgUids := make([]int64, len(missing))
+	for i, uid := range missing {
+		pgUids[i] = int64(uid)
+	}
+
+	shard := m.db.GetShard(clientId)
+	q := postgres.ExtractTxQuery(shard.MasterQ, ctx)
+
+	pgMessages, err := q.FindAllMessagesByUids(ctx, postgresDb.FindAllMessagesByUidsParams{
+		ClientID: clientId,
+		Column2:  pgUids,
+	})
+	if err != nil {
+		return nil, common.ErrInternalDatabase
+	}
+
+	for _, pgMessage := range pgMessages {
+		message := MapPgMessageToMessage(&pgMessage)
+
+		_ = m.cache.SetJSON(
+			ctx,
+			messageKey(clientId, message.Uid),
+			message,
+			MessageCacheTTL,
+		)
+
+		messages = append(messages, message)
+	}
+
+	return messages, nil
+}
+
 func (m *MessageRepository) PublishMessageInQueue(ctx context.Context, message *Message) error {
 	body, err := json.Marshal(message)
 	if err != nil {

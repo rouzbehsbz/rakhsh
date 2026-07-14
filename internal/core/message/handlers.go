@@ -44,3 +44,27 @@ func (m *MessageHandler) PostMessage(c *gin.Context) {
 
 	apiUtils.SendSuccessJson(c, "", output)
 }
+
+func (m *MessageHandler) GetReports(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	clientId, err := apiUtils.GetClientId(c)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	var req GetReportsRequest
+	if err := c.ShouldBindQuery(&req); err != nil {
+		apiUtils.SendError(c, err)
+		return
+	}
+
+	output, err := m.service.GetReports(ctx, clientId, req.Uids)
+	if err != nil {
+		apiUtils.SendError(c, err)
+		return
+	}
+
+	apiUtils.SendSuccessJson(c, "", output)
+}

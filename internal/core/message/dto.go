@@ -6,6 +6,10 @@ type PostMessageRequest struct {
 	IsExpress *bool  `json:"isExpress" binding:"required"`
 }
 
+type GetReportsRequest struct {
+	Uids []uint64 `form:"uids" binding:"required"`
+}
+
 type PostMessageInput struct {
 	ClientId  int32
 	Recipient string
@@ -17,6 +21,6 @@ type PostMessageOutput struct {
 	Uid string `json:"uid"`
 }
 
-type GetMessageOutput struct {
-	Messages []Message `json:"message"`
+type GetReportsOutput struct {
+	Messages []Message `json:"messages"`
 }

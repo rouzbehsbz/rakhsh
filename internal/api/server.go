@@ -79,6 +79,7 @@ func (s *Server) registerRoutes() {
 			messages := v1.Group("/messages")
 			{
 				messages.POST("", AuthorizationMiddleware(), s.rootHandlers.MessageHandler.PostMessage)
+				messages.GET("/reports", AuthorizationMiddleware(), s.rootHandlers.MessageHandler.GetReports)
 			}
 		}
 	}
