@@ -9,9 +9,11 @@ import (
 )
 
 type Config struct {
-	MachineId uint16 `mapstructure:"MACHINE_ID"`
-	Host      string `mapstructure:"HOST"`
-	Port      uint16 `mapstructure:"PORT"`
+	MachineId         uint16 `mapstructure:"MACHINE_ID"`
+	Host              string `mapstructure:"HOST"`
+	Port              uint16 `mapstructure:"PORT"`
+	CronjobMaxWorkers int    `mapstructure:"CRONJOB_MAX_WORKERS"`
+	CronjobShardId    int    `mapstructure:"CRONJOB_SHARD_ID"`
 
 	PostgresShard1Url      string `mapstructure:"POSTGRES_SHARD_1_URL"`
 	PostgresShard2Url      string `mapstructure:"POSTGRES_SHARD_2_URL"`

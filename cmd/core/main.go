@@ -16,6 +16,8 @@ import (
 )
 
 func main() {
+	//TODO: maybe do these stuff in a container
+
 	isDevMode := flag.Bool("dev", true, "Run program in dev mode")
 	flag.Parse()
 
@@ -26,6 +28,7 @@ func main() {
 
 	snowflake.SetMachineID(config.MachineId)
 
+	//TODO: use a simple map right now, but need to use a way to fetch celebrities
 	celebritiesShard := map[int32]int{}
 
 	postgres, err := postgres.NewPostgresService([]string{
@@ -58,6 +61,7 @@ func main() {
 	clientService := client.NewClientService(clientRepository)
 	messageService := message.NewMessageService(postgres, clientRepository, messageRepository, operatorService)
 
+	//TODO: maybe its better to use seperate queues for high piority messages (Express)
 	queues := []struct {
 		name    string
 		handler rabbitmq.QueueHandler
@@ -69,7 +73,10 @@ func main() {
 	}
 
 	for _, q := range queues {
-		if err := rabbit.AddQueue(q.name, q.handler); err != nil {
+		if err := rabbit.AddQueue(q.name, rabbitmq.QueueOptions{
+			Handler:     q.handler,
+			MaxPriority: 10,
+		}); err != nil {
 			log.Fatalf("failed to add queue %s: %v", q.name, err)
 		}
 		if err := rabbit.StartQueueConsumers(q.name, config.RabbitmqMaxWorkers); err != nil {
@@ -86,4 +93,6 @@ func main() {
 	if err := server.Run(); err != nil {
 		log.Fatalf("server terminated unexpectedly: %v", err)
 	}
+
+	//TODO: need to handle terminate signal from the OS fro max duribility
 }

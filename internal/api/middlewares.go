@@ -9,6 +9,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const AuthorizationHeaderPrefix = "JustId "
+
 func AuthorizationMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		header := c.GetHeader("Authorization")
@@ -17,12 +19,12 @@ func AuthorizationMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		if !strings.HasPrefix(header, common.AuthorizationHeaderPrefix) {
+		if !strings.HasPrefix(header, AuthorizationHeaderPrefix) {
 			apiUtils.SendError(c, common.UnauthorizedError("Invalid authorization header"))
 			return
 		}
 
-		sClientId := strings.TrimPrefix(header, common.AuthorizationHeaderPrefix)
+		sClientId := strings.TrimPrefix(header, AuthorizationHeaderPrefix)
 
 		clientId, err := strconv.Atoi(sClientId)
 		if err != nil {
@@ -50,6 +52,8 @@ func ErrorHandlerMiddleware() gin.HandlerFunc {
 		if !ok {
 			appErr = common.InternalError(err.Error())
 		}
+
+		//TODO: maybe need to implement a better logger here
 
 		response := apiUtils.NewErrorResponse(appErr.StatusCode, appErr.Message)
 

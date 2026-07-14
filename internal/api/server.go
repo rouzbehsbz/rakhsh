@@ -55,6 +55,8 @@ func (s *Server) registerMiddlewares() {
 		apiUtils.SendError(c, common.ForbiddenError("You're not allowed to access this method"))
 	})
 
+	//TODO: need to implement request validation
+	//TODO: need to implement proper rate limit
 	s.engine.Use(
 		gzip.Gzip(gzip.DefaultCompression),
 		gin.Logger(),
@@ -76,6 +78,7 @@ func (s *Server) registerRoutes() {
 			{
 				clients.GET("/self", AuthorizationMiddleware(), s.rootHandlers.ClientHandler.GetSelfClientInfoHandler)
 			}
+			//TODO: implement realtime analytics reports
 			messages := v1.Group("/messages")
 			{
 				messages.POST("", AuthorizationMiddleware(), s.rootHandlers.MessageHandler.PostMessage)

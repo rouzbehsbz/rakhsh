@@ -6,6 +6,7 @@ import (
 	"errors"
 	"rakhsh/internal/common"
 	"rakhsh/internal/core/client"
+	"rakhsh/pkg/postgres"
 	"strconv"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+const ProcessingSubmittedMessagesInterval = 10 * time.Second
 const BatchUpdatesBufferSize = 1024
 const BatchUpdatesFlushInterval = 10 * time.Second
 const BatchUpdatesSize = 100
@@ -23,7 +25,7 @@ type Operator interface {
 }
 
 type MessageService struct {
-	transctionManager common.Transactional
+	transctionManager postgres.Transactional
 	clientRepository  *client.ClientRepository
 	messageRepository *MessageRepository
 	operatorService   Operator
@@ -32,7 +34,7 @@ type MessageService struct {
 }
 
 func NewMessageService(
-	transctionManager common.Transactional,
+	transctionManager postgres.Transactional,
 	clientRepository *client.ClientRepository,
 	messageRepository *MessageRepository,
 	operatorService Operator,
@@ -149,6 +151,9 @@ func (m *MessageService) ProcessPendingMessage(delivery amqp.Delivery) {
 
 func (m *MessageService) ProcessSubmittedMessage(delivery amqp.Delivery) {
 	ctx := context.Background()
+
+	//TODO: maybe its not good, wee need to do timing in another way
+	time.Sleep(ProcessingSubmittedMessagesInterval)
 
 	submittedMessage := &SubmittedMessage{}
 	if err := json.Unmarshal(delivery.Body, submittedMessage); err != nil {

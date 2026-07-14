@@ -1,4 +1,5 @@
 #!/bin/sh
+# You should have go and Makefile at least, also i dont do windows version of this !
 
 set -eo pipefail
 

@@ -11,6 +11,10 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+type Transactional interface {
+	WithinTx(ctx context.Context, clientId int32, fn func(ctx context.Context) error) error
+}
+
 func GetTx(ctx context.Context) (pgx.Tx, bool) {
 	tx, ok := ctx.Value(txKey{}).(pgx.Tx)
 	return tx, ok

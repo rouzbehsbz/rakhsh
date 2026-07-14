@@ -68,6 +68,19 @@ func (r *Redis) GetInt(ctx context.Context, key string) (int, error) {
 	return n, nil
 }
 
+func (r *Redis) GetInt64(ctx context.Context, key string) (uint64, error) {
+	n, err := r.Client.Get(ctx, key).Int64()
+	if err != nil {
+		if err == goRedis.Nil {
+			return 0, common.ErrNotFound
+		}
+
+		return 0, err
+	}
+
+	return uint64(n), nil
+}
+
 func (r *Redis) AddInt(ctx context.Context, key string, amount int64) (int64, error) {
 	value, err := r.Client.IncrBy(ctx, key, amount).Result()
 	if err != nil {

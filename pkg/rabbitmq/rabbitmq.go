@@ -7,7 +7,13 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
+const PublishRequestBufferedChannelSize = 1024
+
 type QueueHandler func(amqp.Delivery)
+type QueueOptions struct {
+	Handler     QueueHandler
+	MaxPriority int
+}
 
 type Queue struct {
 	conn *amqp.Connection
@@ -33,7 +39,7 @@ func NewRabbitmq(url string) (*Rabbitmq, error) {
 	return r, nil
 }
 
-func (r *Rabbitmq) AddQueue(name string, handler QueueHandler) error {
+func (r *Rabbitmq) AddQueue(name string, opt QueueOptions) error {
 	conn, err := amqp.Dial(r.url)
 	if err != nil {
 		return fmt.Errorf("failed to connect to rabbitmq server")
@@ -54,7 +60,9 @@ func (r *Rabbitmq) AddQueue(name string, handler QueueHandler) error {
 		false,
 		false,
 		false,
-		amqp.Table{},
+		amqp.Table{
+			"x-max-priority": int32(opt.MaxPriority),
+		},
 	)
 	if err != nil {
 		return fmt.Errorf("can't declare queue for %s", name)
@@ -64,7 +72,7 @@ func (r *Rabbitmq) AddQueue(name string, handler QueueHandler) error {
 		conn:      conn,
 		q:         q,
 		publishCh: publishCh,
-		Handler:   handler,
+		Handler:   opt.Handler,
 	}
 
 	return nil
@@ -105,6 +113,7 @@ func (r *Rabbitmq) StartQueueConsumers(name string, count int) error {
 		}
 
 		go func() {
+			//TODO: need to handle close signals
 			for msg := range deliveries {
 				queue.Handler(msg)
 			}
