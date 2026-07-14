@@ -1,5 +1,5 @@
 FROM golang:1.26.3-alpine3.23 AS builder
-RUN apk update && apk add --no-cache make git
+RUN apk update && apk add --no-cache make git bash
 WORKDIR /app
 COPY go.mod go.sum ./
 ENV GOPROXY=https://goproxy.io,direct

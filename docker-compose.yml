@@ -17,6 +17,18 @@ services:
     ports:
       - "3000:3000"
 
+  cronjobs:
+    build:
+      context: .
+      dockerfile: cronjob.Dockerfile
+    container_name: rakhsh-cronjobs
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
   postgres:
     image: postgres:17-alpine
     container_name: rakhsh-postgres

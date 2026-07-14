@@ -9,11 +9,16 @@ POSTGRES_URL=postgres://$(POSTGRES_USERNAME):$(POSTGRES_PASSWORD)@$(POSTGRES_HOS
 
 run-core:
 	@echo "Running core application ..."
-	go run cmd/core/main.go
+	go run cmd/core/main.go -dev=true
 
 build-core:
 	@echo "Building the core project ..."
 	go build -o .bin/core cmd/core/main.go
+	@echo "Build Completed"
+
+build-cronjob:
+	@echo "Building the cronjob project ..."
+	go build -o .bin/cronjob cmd/cronjob/main.go
 	@echo "Build Completed"
 
 sqlc-generate:

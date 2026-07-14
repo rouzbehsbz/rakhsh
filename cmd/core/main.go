@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"rakhsh/internal/api"
 	"rakhsh/internal/common"
@@ -15,7 +16,10 @@ import (
 )
 
 func main() {
-	config, err := common.NewConfig(true)
+	isDevMode := flag.Bool("dev", true, "Run program in dev mode")
+	flag.Parse()
+
+	config, err := common.NewConfig(*isDevMode)
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
 	}
