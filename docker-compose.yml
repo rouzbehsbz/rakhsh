@@ -16,6 +16,8 @@ services:
       - .env
     ports:
       - "3000:3000"
+    networks:
+      - rakhsh-network
 
   cronjobs:
     build:
@@ -23,14 +25,18 @@ services:
       dockerfile: cronjob.Dockerfile
     container_name: rakhsh-cronjobs
     restart: unless-stopped
+    env_file:
+      - .env
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      - rakhsh-network
 
   postgres:
-    image: postgres:17-alpine
+    image: postgres:16
     container_name: rakhsh-postgres
     restart: unless-stopped
     environment:
@@ -46,9 +52,11 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    networks:
+      - rakhsh-network
 
   rabbitmq:
-    image: rabbitmq:4-management-alpine
+    image: rabbitmq:3-management
     container_name: rakhsh-rabbitmq
     restart: unless-stopped
     environment:
@@ -64,9 +72,11 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    networks:
+      - rakhsh-network
 
   redis:
-    image: redis:8-alpine
+    image: redis:7-alpine
     container_name: rakhsh-redis
     restart: unless-stopped
     command: redis-server --appendonly yes --requirepass root
@@ -75,10 +85,16 @@ services:
     volumes:
       - rakhsh-redis-data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "redis_password", "ping"]
+      test: ["CMD", "redis-cli", "-a", "root", "ping"]
       interval: 5s
       timeout: 5s
       retries: 10
+    networks:
+      - rakhsh-network
+
+networks:
+  rakhsh-network:
+    driver: bridge
 
 volumes:
   rakhsh-postgres-data:
