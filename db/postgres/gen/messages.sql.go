@@ -11,6 +11,18 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type BatchInsertMessagesParams struct {
+	Uid       int64
+	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+	ClientID  int32
+	Status    int16
+	Reason    pgtype.Int2
+	IsExpress bool
+	Recipient string
+	Text      string
+}
+
 const batchUpdateMessages = `-- name: BatchUpdateMessages :exec
 UPDATE messages AS m
 SET
@@ -100,49 +112,6 @@ func (q *Queries) FindMessageByUid(ctx context.Context, arg FindMessageByUidPara
 		&i.Text,
 	)
 	return i, err
-}
-
-const insertMessage = `-- name: InsertMessage :exec
-INSERT INTO "messages" (
-    uid, 
-    created_at, 
-    updated_at, 
-    client_id, 
-    status, 
-    reason, 
-    is_express, 
-    recipient, 
-    text
-) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9
-)
-`
-
-type InsertMessageParams struct {
-	Uid       int64
-	CreatedAt pgtype.Timestamptz
-	UpdatedAt pgtype.Timestamptz
-	ClientID  int32
-	Status    int16
-	Reason    pgtype.Int2
-	IsExpress bool
-	Recipient string
-	Text      string
-}
-
-func (q *Queries) InsertMessage(ctx context.Context, arg InsertMessageParams) error {
-	_, err := q.db.Exec(ctx, insertMessage,
-		arg.Uid,
-		arg.CreatedAt,
-		arg.UpdatedAt,
-		arg.ClientID,
-		arg.Status,
-		arg.Reason,
-		arg.IsExpress,
-		arg.Recipient,
-		arg.Text,
-	)
-	return err
 }
 
 const updateMessage = `-- name: UpdateMessage :exec

@@ -32,10 +32,10 @@ func (m *MessageHandler) PostMessage(c *gin.Context) {
 	}
 
 	output, err := m.service.PostMessage(ctx, PostMessageInput{
-		ClientId:  clientId,
-		Recipient: req.Recipient,
-		Text:      req.Text,
-		IsExpress: *req.IsExpress,
+		ClientId:   clientId,
+		Recipients: req.Recipients,
+		Text:       req.Text,
+		IsExpress:  *req.IsExpress,
 	})
 	if err != nil {
 		apiUtils.SendError(c, err)

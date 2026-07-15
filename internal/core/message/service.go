@@ -55,7 +55,24 @@ func NewMessageService(
 }
 
 func (m *MessageService) PostMessage(ctx context.Context, input PostMessageInput) (PostMessageOutput, error) {
-	var message Message
+	messages := make([]Message, 0, len(input.Recipients))
+	messagesUids := make([]string, 0, len(input.Recipients))
+
+	for _, recipient := range input.Recipients {
+		msg, err := NewMessage(
+			input.ClientId,
+			recipient,
+			input.Text,
+			input.IsExpress,
+		)
+
+		if err != nil {
+			return PostMessageOutput{}, common.InternalError("")
+		}
+
+		messages = append(messages, msg)
+		messagesUids = append(messagesUids, msg.GetUidString())
+	}
 
 	err := m.transctionManager.WithinTx(ctx, input.ClientId, func(txCtx context.Context) error {
 		client, err := m.clientRepository.FindClientById(txCtx, input.ClientId)
@@ -67,22 +84,17 @@ func (m *MessageService) PostMessage(ctx context.Context, input PostMessageInput
 			return common.InternalError("")
 		}
 
-		cost := common.PostMessageCost
+		totalCost := common.PostMessageCost.Mul(decimal.NewFromInt(int64(len(messages))))
 
-		if ok := client.IsBalanceEnough(cost); !ok {
+		if !client.IsBalanceEnough(totalCost) {
 			return common.BadRequestError("insufficient balance")
 		}
 
-		if err = m.clientRepository.UpdateBalanceByAmount(txCtx, input.ClientId, cost.Mul(decimal.NewFromInt(-1))); err != nil {
+		if err = m.clientRepository.UpdateBalanceByAmount(txCtx, input.ClientId, totalCost.Neg()); err != nil {
 			return common.InternalError("")
 		}
 
-		message, err = NewMessage(input.ClientId, input.Recipient, input.Text, input.IsExpress)
-		if err != nil {
-			return common.InternalError("")
-		}
-
-		if err := m.messageRepository.InsertMessage(txCtx, &message); err != nil {
+		if err := m.messageRepository.BatchInsertMessages(txCtx, messages); err != nil {
 			return common.InternalError("")
 		}
 
@@ -92,14 +104,16 @@ func (m *MessageService) PostMessage(ctx context.Context, input PostMessageInput
 		return PostMessageOutput{}, err
 	}
 
-	if err := m.messageRepository.PublishMessageInQueue(ctx, &message); err != nil {
+	//TODO: need to implement outbox pattern here
+
+	if err := m.messageRepository.PublishMessagesInQueue(ctx, messages); err != nil {
 		return PostMessageOutput{
-			Uid: message.GetUidString(),
+			Uids: messagesUids,
 		}, nil
 	}
 
 	return PostMessageOutput{
-		Uid: message.GetUidString(),
+		Uids: messagesUids,
 	}, nil
 }
 
@@ -140,7 +154,7 @@ func (m *MessageService) ProcessPendingMessage(delivery amqp.Delivery) {
 		message.SetStatus(RejectedMessageStatus)
 		message.SetReason(MessageReason(reason))
 
-		if err := m.messageRepository.PublishMessageInQueue(ctx, message); err != nil {
+		if err := m.messageRepository.PublishMessagesInQueue(ctx, []Message{*message}); err != nil {
 			delivery.Nack(false, true)
 			return
 		}
@@ -172,7 +186,7 @@ func (m *MessageService) ProcessSubmittedMessage(delivery amqp.Delivery) {
 		message.SetReason(OperatorErrorMessageReason)
 	}
 
-	if publishErr := m.messageRepository.PublishMessageInQueue(ctx, &message); publishErr != nil {
+	if publishErr := m.messageRepository.PublishMessagesInQueue(ctx, []Message{message}); publishErr != nil {
 		delivery.Nack(false, true)
 		return
 	}

@@ -1,16 +1,24 @@
--- name: InsertMessage :exec
+-- name: BatchInsertMessages :copyfrom
 INSERT INTO "messages" (
-    uid, 
-    created_at, 
-    updated_at, 
-    client_id, 
-    status, 
-    reason, 
-    is_express, 
-    recipient, 
+    uid,
+    created_at,
+    updated_at,
+    client_id,
+    status,
+    reason,
+    is_express,
+    recipient,
     text
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9
+    $1,
+    $2,
+    $3,
+    $4,
+    $5,
+    $6,
+    $7,
+    $8,
+    $9
 );
 
 -- name: UpdateMessage :exec

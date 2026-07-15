@@ -30,21 +30,37 @@ func NewMessageRepository(db *postgres.Postgres, queue *rabbitmq.Rabbitmq, cache
 	}
 }
 
-func (m *MessageRepository) InsertMessage(ctx context.Context, message *Message) error {
-	shard := m.db.GetShard(message.ClientId)
+func (m *MessageRepository) BatchInsertMessages(ctx context.Context, messages []Message) error {
+	if len(messages) == 0 {
+		return nil
+	}
+
+	shard := m.db.GetShard(messages[0].ClientId)
 	q := postgres.ExtractTxQuery(shard.MasterQ, ctx)
 
-	err := q.InsertMessage(ctx, postgresDb.InsertMessageParams(MapMessageToPgMessage(message)))
+	params := make([]postgresDb.BatchInsertMessagesParams, 0, len(messages))
+
+	for _, message := range messages {
+		params = append(params, postgresDb.BatchInsertMessagesParams(
+			MapMessageToPgMessage(&message),
+		))
+	}
+
+	_, err := q.BatchInsertMessages(ctx, params)
 	if err != nil {
 		return common.ErrInternalDatabase
 	}
 
-	_ = m.cache.SetJSON(
-		ctx,
-		messageKey(message.ClientId, message.Uid),
-		message,
-		MessageCacheTTL,
-	)
+	for i := range messages {
+		message := &messages[i]
+
+		_ = m.cache.SetJSON(
+			ctx,
+			messageKey(message.ClientId, message.Uid),
+			message,
+			MessageCacheTTL,
+		)
+	}
 
 	return nil
 }
@@ -199,24 +215,39 @@ func (m *MessageRepository) FindAllMessagesByUids(ctx context.Context, clientId 
 	return messages, nil
 }
 
-func (m *MessageRepository) PublishMessageInQueue(ctx context.Context, message *Message) error {
-	body, err := json.Marshal(message)
-	if err != nil {
-		return err
+func (m *MessageRepository) PublishMessagesInQueue(ctx context.Context, messages []Message) error {
+	//TODO: implement this with true rabbitmq batch publish
+	for i := range messages {
+		message := &messages[i]
+
+		body, err := json.Marshal(message)
+		if err != nil {
+			return err
+		}
+
+		priority := uint8(1)
+		if message.IsExpress {
+			priority = 5
+		}
+
+		err = m.queue.Publish(
+			ctx,
+			message.GetQueueName(),
+			amqp.Publishing{
+				ContentType:  "application/json",
+				Body:         body,
+				Priority:     priority,
+				DeliveryMode: amqp.Persistent,
+			},
+		)
+
+		if err != nil {
+			return err
+		}
 	}
 
-	priority := uint8(1)
-	if message.IsExpress {
-		priority = 5
-	}
-
-	return m.queue.Publish(ctx, message.GetQueueName(), amqp.Publishing{
-		ContentType: "application/json",
-		Body:        body,
-		Priority:    priority,
-	})
+	return nil
 }
-
 func (m *MessageRepository) PublishSubmittedMessageInQueue(ctx context.Context, submittedMessage *SubmittedMessage) error {
 	body, err := json.Marshal(submittedMessage)
 	if err != nil {
