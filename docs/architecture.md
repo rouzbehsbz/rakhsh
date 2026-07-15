@@ -80,3 +80,4 @@ This architecture provides:
 - Outbox pattern
 - Maybe better use of CPU cache
 - Use seperate queues for express sms
+- Handle gracefully shutdown signal
