@@ -12,6 +12,7 @@ import (
 type txKey struct{}
 
 type Shard struct {
+	//TODO: add support for replicas
 	Master  *pgxpool.Pool
 	MasterQ *postgresDb.Queries
 }

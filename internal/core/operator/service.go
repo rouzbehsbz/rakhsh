@@ -6,19 +6,24 @@ import (
 	"sync/atomic"
 )
 
+type Operator interface {
+	Send(message *message.Message) error
+	Fetch(clientId int32, uids []uint64) ([]message.SubmittedMessage, error)
+}
+
 type OperatorService struct {
-	operators []message.Operator
+	operators []Operator
 	index     atomic.Int32
 }
 
 func NewOperatorService() *OperatorService {
 	return &OperatorService{
-		operators: []message.Operator{},
+		operators: []Operator{},
 		index:     atomic.Int32{},
 	}
 }
 
-func (o *OperatorService) RegisterOperator(operator message.Operator) {
+func (o *OperatorService) RegisterOperator(operator Operator) {
 	o.operators = append(o.operators, operator)
 }
 
@@ -27,7 +32,7 @@ func (o *OperatorService) nextIndex() int32 {
 	return index % int32(len(o.operators))
 }
 
-func (o *OperatorService) nextOperator() message.Operator {
+func (o *OperatorService) nextOperator() Operator {
 	nextIndex := o.nextIndex()
 	return o.operators[nextIndex]
 }
