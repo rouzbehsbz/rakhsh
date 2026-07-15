@@ -76,9 +76,14 @@ This architecture provides:
 - Efficiently use of CPU cores for maximum parallelism (goroutines)
 - Lock-free algorithms (Avoiding mutex)
 
+### Infrastructure Choices
+
 ### Todos
 
 - Outbox pattern
 - Maybe better use of CPU cache
 - Use seperate queues for express sms
 - Handle gracefully shutdown signal
+- Use redis for realtime analytical reports
+- Implement rate limit
+- Implement request validation
