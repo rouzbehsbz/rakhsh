@@ -51,6 +51,7 @@ This architecture provides:
 - DNS Load balancing for reverse proxy
 - HTTP/TCP Load balancing for core and cache/db/queue
 - Async workloads
+- Bind NMI/IRQ to specified CPU cores
 
 ### Disk Optimizations
 
