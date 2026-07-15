@@ -59,6 +59,7 @@ This architecture provides:
 - B+Tree index on time-based UUIDs (Snowflake algorithm)
 - Table partitioning
 - Sharding
+- Replication (Don't need another column based db like clickhouse)
 - RAID and higher IOPS disks
 
 ### RAM Optimizations
